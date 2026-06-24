@@ -46,6 +46,17 @@ Opcion recomendada:
 
 Tambien se puede adaptar facilmente a Arduino IDE copiando el contenido de `src/main.cpp` a un sketch `.ino`.
 
+## Instalacion y ejecucion
+
+Instala las dependencias con PlatformIO abriendo el proyecto o ejecutando la
+primera compilacion. Comandos utiles:
+
+```sh
+pio run
+pio run -t upload
+pio device monitor
+```
+
 ## Cargar con PlatformIO
 
 1. Abre esta carpeta con VS Code.
@@ -107,3 +118,11 @@ b  muestra estado Bluetooth LE
 - `3V3`: alimentacion de sensores a 3.3 V.
 - `GND`: tierra comun.
 - `LED_BUILTIN`: LED integrado usado por el firmware.
+
+## Documentacion y pendientes
+
+- `CONTEXTO_XIAO_NRF52840_BASIC_TEST.md`
+- `docs/arquitectura.md`
+- `docs/decisiones.md`
+- `docs/cableado.md`
+- `TODO.md`
