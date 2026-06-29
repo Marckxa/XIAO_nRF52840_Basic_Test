@@ -18,6 +18,7 @@ namespace {
 constexpr uint32_t kBlinkIntervalMs = 500;
 constexpr uint32_t kStatusIntervalMs = 60000;
 constexpr uint32_t kBleHeartbeatIntervalMs = 5000;
+constexpr uint32_t kBleRxCommandTimeoutMs = 300;
 constexpr uint8_t kI2cStartAddress = 1;
 constexpr uint8_t kI2cEndAddress = 126;
 
@@ -82,8 +83,14 @@ void processBleCommand(const char* cmd) {
 
   if (isCommandLed(cmd)) {
     triggerOutputD7();
-  } else {
-    bleUart.print("Eco: ");
+    return;
+  }
+
+  Serial.print(F("Comando BLE desconocido: "));
+  Serial.println(cmd);
+
+  if (bleUart.notifyEnabled()) {
+    bleUart.print("ERR CMD UNKNOWN ");
     bleUart.println(cmd);
   }
 }
@@ -166,7 +173,9 @@ void connectCallback(uint16_t connHandle) {
   }
   Serial.println();
 
-  bleUart.println("XIAO-BLE-TEST conectado. Envia LED para activar D7.");
+  if (bleUart.notifyEnabled()) {
+    bleUart.println("XIAO-BLE-TEST conectado. Envia LED para activar D7.");
+  }
 }
 
 void disconnectCallback(uint16_t connHandle, uint8_t reason) {
@@ -263,9 +272,19 @@ void handleSerialCommand(char command) {
 void handleBleUart() {
   static char rxBuffer[32];
   static uint8_t rxIndex = 0;
+  static uint32_t lastRxMs = 0;
+
+  const uint32_t now = millis();
+
+  if (rxIndex > 0 && now - lastRxMs >= kBleRxCommandTimeoutMs) {
+    rxBuffer[rxIndex] = '\0';
+    processBleCommand(rxBuffer);
+    rxIndex = 0;
+  }
 
   while (bleUart.available()) {
     char c = static_cast<char>(bleUart.read());
+    lastRxMs = millis();
 
     if (rxIndex == 0 && (c == ' ' || c == '\t')) {
       continue;
@@ -302,13 +321,24 @@ void handleBleUart() {
     } else {
       rxIndex = 0;
       Serial.println(F("BLE RX demasiado largo, descartado"));
-      bleUart.println("ERROR: comando demasiado largo");
+
+      if (bleUart.notifyEnabled()) {
+        bleUart.println("ERROR: comando demasiado largo");
+      }
     }
   }
 }
 
 void sendBleHeartbeat(uint32_t now) {
-  if (!Bluefruit.connected() || now - lastBleHeartbeatMs < kBleHeartbeatIntervalMs) {
+  if (!Bluefruit.connected()) {
+    return;
+  }
+
+  if (!bleUart.notifyEnabled()) {
+    return;
+  }
+
+  if (now - lastBleHeartbeatMs < kBleHeartbeatIntervalMs) {
     return;
   }
 
